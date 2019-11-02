@@ -1,5 +1,10 @@
 # Created by https://www.gitignore.io/api/executable
 # Edit at https://www.gitignore.io/?templates=executable
+### vs code files ###
+.vscode/
+
+### Database ###
+*.db
 
 ### Executable ###
 *.app
