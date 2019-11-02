@@ -18,28 +18,57 @@ type oneRec struct {
 	Pressure    float64 `json:"pressure"`
 }
 
+type oneBoard struct {
+	Board       string `json:"board"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 type allRecords []oneRec
 
 func main() {
 	database, _ :=
 		sql.Open("sqlite3", "./fathenda.db")
+
 	statement, _ :=
 		database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC)")
 	statement.Exec()
+
+	statement1, _ :=
+		database.Prepare("CREATE TABLE IF NOT EXISTS sensors (id INTEGER PRIMARY KEY, board TEXT, name TEXT, description TEXT, added NUMERIC)")
+	statement1.Exec()
 
 	// statement, _ =
 	// 	database.Prepare("INSERT INTO sensorsdata (board, timestamp, temperature, humidity, pressure) VALUES (?, ?, ?, ?, ?)")
 	// statement.Exec("test_board", time.Now().Unix(), rand.Float64(), rand.Float64(), rand.Float64())
 
-	http.HandleFunc("/get_json", jsonResponse)
-	http.HandleFunc("/get_table", htmlResponse)
-	http.HandleFunc("/set_data", setSensorData)
+	http.HandleFunc("/get_board_data", jsonResponse)
+	http.HandleFunc("/", htmlHelpResponse)
+	http.HandleFunc("/set_board_data", setSensorData)
 
 	fmt.Printf("Starting server for testing HTTP POST...\n")
 	if err := http.ListenAndServe(":5000", nil); err != nil {
 		log.Fatal(err)
 	}
 
+}
+
+func checkIfBoardExist(BoardObj oneBoard) {
+	database, _ :=
+		sql.Open("sqlite3", "./fathenda.db")
+
+	rows, _ := database.Query("SELECT id, board FROM sensors WHERE board='" + BoardObj.Board + "'")
+	defer rows.Close()
+
+	var count int = 0
+	for rows.Next() {
+		count++
+	}
+	if count == 0 {
+		statement, _ :=
+			database.Prepare("INSERT INTO sensors (board, name, description, added) VALUES (?, ?, ?, ?)")
+		statement.Exec(BoardObj.Board, "", "", time.Now().Unix())
+	}
 }
 
 func setSensorData(w http.ResponseWriter, r *http.Request) {
@@ -55,6 +84,14 @@ func setSensorData(w http.ResponseWriter, r *http.Request) {
 		}
 
 		fmt.Println(rec.Board)
+
+		var Board oneBoard
+
+		Board.Board = rec.Board
+		Board.Description = ""
+		Board.Name = ""
+
+		checkIfBoardExist(Board)
 
 		database, _ :=
 			sql.Open("sqlite3", "./fathenda.db")
@@ -90,10 +127,12 @@ func getJSON(sqlString string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	count := len(columns)
 	tableData := make([]map[string]interface{}, 0)
 	values := make([]interface{}, count)
 	valuePtrs := make([]interface{}, count)
+
 	for rows.Next() {
 		for i := 0; i < count; i++ {
 			valuePtrs[i] = &values[i]
@@ -113,11 +152,12 @@ func getJSON(sqlString string) (string, error) {
 		}
 		tableData = append(tableData, entry)
 	}
+
 	jsonData, err := json.Marshal(tableData)
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(string(jsonData))
+	// fmt.Println(string(jsonData))
 	return string(jsonData), nil
 }
 
@@ -159,7 +199,7 @@ func jsonResponse(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func htmlResponse(w http.ResponseWriter, r *http.Request) {
+func htmlHelpResponse(w http.ResponseWriter, r *http.Request) {
 	// if r.URL.Path != "/" {
 	// 	http.Error(w, "404 not found.", http.StatusNotFound)
 	// 	return
