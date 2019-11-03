@@ -43,6 +43,7 @@ func main() {
 	// statement.Exec("test_board", time.Now().Unix(), rand.Float64(), rand.Float64(), rand.Float64())
 
 	http.HandleFunc("/get_board_data", jsonResponse)
+	http.HandleFunc("/get_board_data_count", jsonResponseCount)
 	http.HandleFunc("/", htmlHelpResponse)
 	http.HandleFunc("/set_board_data", setSensorData)
 
@@ -123,6 +124,7 @@ func getJSON(sqlString string) (string, error) {
 		return "", err
 	}
 	defer rows.Close()
+
 	columns, err := rows.Columns()
 	if err != nil {
 		return "", err
@@ -157,8 +159,45 @@ func getJSON(sqlString string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// fmt.Println(string(jsonData))
+	fmt.Println(string(jsonData))
 	return string(jsonData), nil
+}
+
+func getCount(sqlString string) (string, error) {
+
+	database, _ :=
+		sql.Open("sqlite3", "./fathenda.db")
+
+	rows, err := database.Query(sqlString)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	var count int = 0
+	for rows.Next() {
+		count++
+	}
+	return string(count), nil
+}
+
+func jsonResponseCount(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		keys := r.URL.Query()
+		fmt.Println(keys)
+		var sqlString string
+		sqlString = "SELECT id, board, timestamp, temperature, humidity, pressure FROM sensorsdata"
+		if r.URL.Query().Get("board") != "" {
+			sqlString = "SELECT id, board, timestamp, temperature, humidity, pressure FROM sensorsdata WHERE board='" + r.URL.Query().Get("board") + "'"
+		}
+		fmt.Println(sqlString)
+		w.Header().Set("Content-Type", "application/json")
+		response, _ := getJSON(sqlString)
+		fmt.Fprintf(w, response)
+
+	default:
+		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
+	}
 }
 
 func jsonResponse(w http.ResponseWriter, r *http.Request) {
