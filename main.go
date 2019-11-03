@@ -35,7 +35,7 @@ var database *sql.DB
 func main() {
 
 	database, _ = sql.Open("sqlite3", "./fathenda.db")
-
+	
 	// statement, _ :=
 	// 	database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC, soil NUMERIC)")
 	// statement.Exec()
