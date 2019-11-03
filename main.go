@@ -19,6 +19,7 @@ type oneRec struct {
 	Temperature float64 `json:"temperature"`
 	Humidity    float64 `json:"humidity"`
 	Pressure    float64 `json:"pressure"`
+	Soil        float64 `json:"soil"`
 }
 
 type oneBoard struct {
@@ -42,6 +43,7 @@ func main() {
 
 	http.HandleFunc("/get_board_data_count", jsonResponseCount)
 	http.HandleFunc("/", htmlHelpResponse)
+
 	http.HandleFunc("/set_board_data", setSensorData)
 
 	fmt.Printf("Starting Server to HANDLE ahome.pro back end\n")
@@ -75,7 +77,7 @@ func prepareDatabase() {
 	// 	sql.Open("sqlite3", "./fathenda.db")
 
 	statement, _ :=
-		database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC)")
+		database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC, soil NUMERIC)")
 	statement.Exec()
 
 	statement1, _ :=
@@ -112,8 +114,8 @@ func setSensorData(w http.ResponseWriter, r *http.Request) {
 			database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC)")
 		statement.Exec()
 		statement, _ =
-			database.Prepare("INSERT INTO sensorsdata (board, timestamp, temperature, humidity, pressure) VALUES (?, ?, ?, ?, ?)")
-		statement.Exec(rec.Board, time.Now().Unix(), rec.Temperature, rec.Humidity, rec.Pressure)
+			database.Prepare("INSERT INTO sensorsdata (board, timestamp, temperature, humidity, pressure, soil) VALUES (?, ?, ?, ?, ?, ?)")
+		statement.Exec(rec.Board, time.Now().Unix(), rec.Temperature, rec.Humidity, rec.Pressure, rec.Soil)
 
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusCreated)
@@ -238,7 +240,7 @@ func jsonBoardDataResponse(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(keys)
 		var sqlString string
 
-		sqlString = "SELECT id, board, timestamp, temperature, humidity, pressure FROM sensorsdata"
+		sqlString = "SELECT id, board, timestamp, temperature, humidity, soil, pressure FROM sensorsdata"
 
 		if r.URL.Query().Get("board") != "" {
 			sqlString = sqlString + " WHERE board='" + r.URL.Query().Get("board") + "'"
