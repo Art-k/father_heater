@@ -27,16 +27,6 @@ type oneBoard struct {
 type allRecords []oneRec
 
 func main() {
-	database, _ :=
-		sql.Open("sqlite3", "./fathenda.db")
-
-	statement, _ :=
-		database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC)")
-	statement.Exec()
-
-	statement1, _ :=
-		database.Prepare("CREATE TABLE IF NOT EXISTS sensors (id INTEGER PRIMARY KEY, board TEXT, name TEXT, description TEXT, added NUMERIC)")
-	statement1.Exec()
 
 	// statement, _ =
 	// 	database.Prepare("INSERT INTO sensorsdata (board, timestamp, temperature, humidity, pressure) VALUES (?, ?, ?, ?, ?)")
@@ -70,6 +60,21 @@ func checkIfBoardExist(BoardObj oneBoard) {
 			database.Prepare("INSERT INTO sensors (board, name, description, added) VALUES (?, ?, ?, ?)")
 		statement.Exec(BoardObj.Board, "", "", time.Now().Unix())
 	}
+}
+
+func prepareDatabase() {
+
+	database, _ :=
+		sql.Open("sqlite3", "./fathenda.db")
+
+	statement, _ :=
+		database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC)")
+	statement.Exec()
+
+	statement1, _ :=
+		database.Prepare("CREATE TABLE IF NOT EXISTS sensors (id INTEGER PRIMARY KEY, board TEXT, name TEXT, description TEXT, added NUMERIC)")
+	statement1.Exec()
+
 }
 
 func setSensorData(w http.ResponseWriter, r *http.Request) {
@@ -214,8 +219,9 @@ func jsonResponse(w http.ResponseWriter, r *http.Request) {
 		var sqlString string
 		sqlString = "SELECT id, board, timestamp, temperature, humidity, pressure FROM sensorsdata"
 		if r.URL.Query().Get("board") != "" {
-			sqlString = "SELECT id, board, timestamp, temperature, humidity, pressure FROM sensorsdata WHERE board='" + r.URL.Query().Get("board") + "'"
+			sqlString = sqlString + " WHERE board='" + r.URL.Query().Get("board") + "'"
 		}
+		sqlString = sqlString + " ORDER BY ASC"
 		fmt.Println(sqlString)
 		w.Header().Set("Content-Type", "application/json")
 		response, _ := getJSON(sqlString)
