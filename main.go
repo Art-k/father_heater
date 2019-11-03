@@ -108,12 +108,12 @@ func setSensorData(w http.ResponseWriter, r *http.Request) {
 
 		checkIfBoardExist(Board)
 
-		database, _ :=
-			sql.Open("sqlite3", "./fathenda.db")
+		// database, _ :=
+		// 	sql.Open("sqlite3", "./fathenda.db")
+		// statement, _ :=
+		// 	database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC)")
+		// statement.Exec()
 		statement, _ :=
-			database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC)")
-		statement.Exec()
-		statement, _ =
 			database.Prepare("INSERT INTO sensorsdata (board, timestamp, temperature, humidity, pressure, soil) VALUES (?, ?, ?, ?, ?, ?)")
 		statement.Exec(rec.Board, time.Now().Unix(), rec.Temperature, rec.Humidity, rec.Pressure, rec.Soil)
 
