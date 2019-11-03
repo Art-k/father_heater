@@ -37,7 +37,9 @@ func main() {
 
 	prepareDatabase()
 
-	http.HandleFunc("/get_board_data", jsonResponse)
+	http.HandleFunc("/get_board_data", jsonBoardDataResponse)
+	http.HandleFunc("/get_board", jsonBoardResponse)
+
 	http.HandleFunc("/get_board_data_count", jsonResponseCount)
 	http.HandleFunc("/", htmlHelpResponse)
 	http.HandleFunc("/set_board_data", setSensorData)
@@ -113,6 +115,7 @@ func setSensorData(w http.ResponseWriter, r *http.Request) {
 			database.Prepare("INSERT INTO sensorsdata (board, timestamp, temperature, humidity, pressure) VALUES (?, ?, ?, ?, ?)")
 		statement.Exec(rec.Board, time.Now().Unix(), rec.Temperature, rec.Humidity, rec.Pressure)
 
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusCreated)
 
 		addedrecord, _, _ := getJSON("SELECT * FROM sensorsdata ORDER BY id DESC LIMIT 1")
@@ -215,7 +218,7 @@ func jsonResponseCount(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Println(sqlString)
 		w.Header().Set("Content-Type", "application/json")
-
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		_, count, _ := getJSON(sqlString)
 
 		fmt.Fprintf(w, strconv.Itoa(count))
@@ -225,12 +228,13 @@ func jsonResponseCount(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func jsonResponse(w http.ResponseWriter, r *http.Request) {
+func jsonBoardDataResponse(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
 
 		keys := r.URL.Query()
+		fmt.Println("\n-- URL parameters --")
 		fmt.Println(keys)
 		var sqlString string
 
@@ -255,7 +259,7 @@ func jsonResponse(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Println(sqlString)
 		w.Header().Set("Content-Type", "application/json")
-
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		type jsResponse struct {
 			APIRev string                   `json:"APIRev"`
 			Entity []map[string]interface{} `json:"Entity"`
@@ -270,19 +274,61 @@ func jsonResponse(w http.ResponseWriter, r *http.Request) {
 		responseStruct.Entity = entity
 		responseStruct.Total = total
 
-		fmt.Println(responseStruct)
-
-		fmt.Println("=========================================================================")
-
 		response, _ := json.Marshal(responseStruct)
-
-		fmt.Println(response)
-
-		fmt.Println("=========================================================================")
 
 		fmt.Fprintf(w, string(response))
 
-		// fmt.Fprintf(w, response)
+	default:
+		fmt.Fprintf(w, "Sorry, only GET")
+	}
+}
+
+func jsonBoardResponse(w http.ResponseWriter, r *http.Request) {
+
+	switch r.Method {
+	case "GET":
+
+		keys := r.URL.Query()
+		fmt.Println("\n-- URL parameters --")
+		fmt.Println(keys)
+		var sqlString string
+
+		sqlString = "SELECT id, board, name, description, added FROM sensors"
+
+		if r.URL.Query().Get("board") != "" {
+			sqlString = sqlString + " WHERE board='" + r.URL.Query().Get("board") + "'"
+		}
+
+		// SORTING
+		var sortBy string = "added"
+		if r.URL.Query().Get("sort_by") != "" {
+			sortBy = r.URL.Query().Get("sort_by")
+		}
+
+		var sortDir string = "DESC"
+		if r.URL.Query().Get("sort") != "" {
+			sortDir = r.URL.Query().Get("sort")
+		}
+
+		sqlString = sqlString + " ORDER BY " + sortBy + " " + sortDir
+
+		fmt.Println(sqlString)
+
+		type jsResponse struct {
+			APIRev string                   `json:"APIRev"`
+			Entity []map[string]interface{} `json:"Entity"`
+			Total  int                      `json:"Total"`
+		}
+		var responseStruct jsResponse
+		responseStruct.APIRev = version
+		entity, total, _ := getJSON(sqlString)
+		responseStruct.Entity = entity
+		responseStruct.Total = total
+		response, _ := json.Marshal(responseStruct)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		fmt.Fprintf(w, string(response))
 
 	default:
 		fmt.Fprintf(w, "Sorry, only GET")
