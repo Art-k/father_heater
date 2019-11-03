@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -26,7 +27,11 @@ type oneBoard struct {
 
 type allRecords []oneRec
 
+var database *sql.DB
+
 func main() {
+
+	database, _ = sql.Open("sqlite3", "./fathenda.db")
 
 	// statement, _ =
 	// 	database.Prepare("INSERT INTO sensorsdata (board, timestamp, temperature, humidity, pressure) VALUES (?, ?, ?, ?, ?)")
@@ -45,8 +50,8 @@ func main() {
 }
 
 func checkIfBoardExist(BoardObj oneBoard) {
-	database, _ :=
-		sql.Open("sqlite3", "./fathenda.db")
+	// database, _ :=
+	// 	sql.Open("sqlite3", "./fathenda.db")
 
 	rows, _ := database.Query("SELECT id, board FROM sensors WHERE board='" + BoardObj.Board + "'")
 	defer rows.Close()
@@ -64,8 +69,8 @@ func checkIfBoardExist(BoardObj oneBoard) {
 
 func prepareDatabase() {
 
-	database, _ :=
-		sql.Open("sqlite3", "./fathenda.db")
+	// database, _ :=
+	// 	sql.Open("sqlite3", "./fathenda.db")
 
 	statement, _ :=
 		database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC)")
@@ -121,14 +126,15 @@ func setSensorData(w http.ResponseWriter, r *http.Request) {
 
 func getJSON(sqlString string) (string, error) {
 
-	database, _ :=
-		sql.Open("sqlite3", "./fathenda.db")
+	// database, _ :=
+	// 	sql.Open("sqlite3", "./fathenda.db")
 
 	rows, err := database.Query(sqlString)
 	if err != nil {
 		return "", err
 	}
 	defer rows.Close()
+	database.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {
@@ -139,8 +145,11 @@ func getJSON(sqlString string) (string, error) {
 	tableData := make([]map[string]interface{}, 0)
 	values := make([]interface{}, count)
 	valuePtrs := make([]interface{}, count)
-
+	var rowCount int = 0
 	for rows.Next() {
+
+		rowCount++
+
 		for i := 0; i < count; i++ {
 			valuePtrs[i] = &values[i]
 		}
@@ -160,6 +169,8 @@ func getJSON(sqlString string) (string, error) {
 		tableData = append(tableData, entry)
 	}
 
+	fmt.Println("Row count : " + strconv.Itoa(rowCount))
+
 	jsonData, err := json.Marshal(tableData)
 	if err != nil {
 		return "", err
@@ -170,8 +181,8 @@ func getJSON(sqlString string) (string, error) {
 
 func getCount(sqlString string) (string, error) {
 
-	database, _ :=
-		sql.Open("sqlite3", "./fathenda.db")
+	// database, _ :=
+	// 	sql.Open("sqlite3", "./fathenda.db")
 
 	rows, err := database.Query(sqlString)
 	if err != nil {
