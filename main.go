@@ -52,7 +52,7 @@ func main() {
 
 	http.HandleFunc("/set_board_data", setSensorData)
 
-	fmt.Printf("Starting Server to HANDLE ahome.pro back end\n")
+	fmt.Printf("Starting Server to HANDLE ahome.pro back end\nAPI revision " + version + "\n\n")
 	if err := http.ListenAndServe(":5000", nil); err != nil {
 		log.Fatal(err)
 	}
