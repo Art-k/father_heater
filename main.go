@@ -36,7 +36,13 @@ func main() {
 
 	database, _ = sql.Open("sqlite3", "./fathenda.db")
 
-	prepareDatabase()
+	statement, _ :=
+		database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC, soil NUMERIC)")
+	statement.Exec()
+
+	statement1, _ :=
+		database.Prepare("CREATE TABLE IF NOT EXISTS sensors (id INTEGER PRIMARY KEY, board TEXT, name TEXT, description TEXT, added NUMERIC)")
+	statement1.Exec()
 
 	http.HandleFunc("/get_board_data", jsonBoardDataResponse)
 	http.HandleFunc("/get_board", jsonBoardResponse)
@@ -75,14 +81,6 @@ func prepareDatabase() {
 
 	// database, _ :=
 	// 	sql.Open("sqlite3", "./fathenda.db")
-
-	statement, _ :=
-		database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC, soil NUMERIC)")
-	statement.Exec()
-
-	statement1, _ :=
-		database.Prepare("CREATE TABLE IF NOT EXISTS sensors (id INTEGER PRIMARY KEY, board TEXT, name TEXT, description TEXT, added NUMERIC)")
-	statement1.Exec()
 
 }
 
