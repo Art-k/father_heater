@@ -36,13 +36,15 @@ func main() {
 
 	database, _ = sql.Open("sqlite3", "./fathenda.db")
 
-	statement, _ :=
-		database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC, soil NUMERIC)")
-	statement.Exec()
+	// statement, _ :=
+	// 	database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC, soil NUMERIC)")
+	// statement.Exec()
 
-	statement1, _ :=
-		database.Prepare("CREATE TABLE IF NOT EXISTS sensors (id INTEGER PRIMARY KEY, board TEXT, name TEXT, description TEXT, added NUMERIC)")
-	statement1.Exec()
+	// statement1, _ :=
+	// 	database.Prepare("CREATE TABLE IF NOT EXISTS sensors (id INTEGER PRIMARY KEY, board TEXT, name TEXT, description TEXT, added NUMERIC)")
+	// statement1.Exec()
+
+	// database.Close()
 
 	http.HandleFunc("/get_board_data", jsonBoardDataResponse)
 	http.HandleFunc("/get_board", jsonBoardResponse)
@@ -77,13 +79,6 @@ func checkIfBoardExist(BoardObj oneBoard) {
 	}
 }
 
-func prepareDatabase() {
-
-	// database, _ :=
-	// 	sql.Open("sqlite3", "./fathenda.db")
-
-}
-
 func setSensorData(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
@@ -115,6 +110,8 @@ func setSensorData(w http.ResponseWriter, r *http.Request) {
 			database.Prepare("INSERT INTO sensorsdata (board, timestamp, temperature, humidity, pressure, soil) VALUES (?, ?, ?, ?, ?, ?)")
 		statement.Exec(rec.Board, time.Now().Unix(), rec.Temperature, rec.Humidity, rec.Pressure, rec.Soil)
 
+		// database.Close()
+
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusCreated)
 
@@ -133,7 +130,7 @@ func setSensorData(w http.ResponseWriter, r *http.Request) {
 
 func getJSON(sqlString string) ([]map[string]interface{}, int, error) {
 
-	// database, _ :=
+	// database, _ =
 	// 	sql.Open("sqlite3", "./fathenda.db")
 
 	rows, err := database.Query(sqlString)
@@ -180,13 +177,6 @@ func getJSON(sqlString string) ([]map[string]interface{}, int, error) {
 
 	return tableData, rowCount, err
 
-	// jsonData, err := json.Marshal(tableData)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// fmt.Println(string(jsonData))
-	// return string(jsonData), nil
 }
 
 func getCount(sqlString string) (string, error) {
