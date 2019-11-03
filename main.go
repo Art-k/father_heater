@@ -33,9 +33,7 @@ func main() {
 
 	database, _ = sql.Open("sqlite3", "./fathenda.db")
 
-	// statement, _ =
-	// 	database.Prepare("INSERT INTO sensorsdata (board, timestamp, temperature, humidity, pressure) VALUES (?, ?, ?, ?, ?)")
-	// statement.Exec("test_board", time.Now().Unix(), rand.Float64(), rand.Float64(), rand.Float64())
+	prepareDatabase()
 
 	http.HandleFunc("/get_board_data", jsonResponse)
 	http.HandleFunc("/get_board_data_count", jsonResponseCount)
@@ -134,7 +132,7 @@ func getJSON(sqlString string) (string, error) {
 		return "", err
 	}
 	defer rows.Close()
-	database.Close()
+	// database.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {
@@ -175,6 +173,7 @@ func getJSON(sqlString string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	fmt.Println(string(jsonData))
 	return string(jsonData), nil
 }
@@ -217,10 +216,6 @@ func jsonResponseCount(w http.ResponseWriter, r *http.Request) {
 }
 
 func jsonResponse(w http.ResponseWriter, r *http.Request) {
-	// if r.URL.Path != "/" {
-	// 	http.Error(w, "404 not found.", http.StatusNotFound)
-	// 	return
-	// }
 
 	switch r.Method {
 	case "GET":
@@ -228,30 +223,33 @@ func jsonResponse(w http.ResponseWriter, r *http.Request) {
 		keys := r.URL.Query()
 		fmt.Println(keys)
 		var sqlString string
+
 		sqlString = "SELECT id, board, timestamp, temperature, humidity, pressure FROM sensorsdata"
+
 		if r.URL.Query().Get("board") != "" {
 			sqlString = sqlString + " WHERE board='" + r.URL.Query().Get("board") + "'"
 		}
-		sqlString = sqlString + " ORDER BY ASC"
+
+		// SORTING
+		var sortBy string = "timestamp"
+		if r.URL.Query().Get("sort_by") != "" {
+			sortBy = r.URL.Query().Get("sort_by")
+		}
+
+		var sortDir string = "DESC"
+		if r.URL.Query().Get("sort") != "" {
+			sortDir = r.URL.Query().Get("sort")
+		}
+
+		sqlString = sqlString + " ORDER BY " + sortBy + " " + sortDir
+
 		fmt.Println(sqlString)
 		w.Header().Set("Content-Type", "application/json")
 		response, _ := getJSON(sqlString)
 		fmt.Fprintf(w, response)
 
-	case "POST":
-		// Call ParseForm() to parse the raw query and update r.PostForm and r.Form.
-		if err := r.ParseForm(); err != nil {
-			fmt.Fprintf(w, "ParseForm() err: %v", err)
-			return
-		}
-		fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
-		name := r.FormValue("name")
-		address := r.FormValue("address")
-		fmt.Fprintf(w, "Name = %s\n", name)
-		fmt.Fprintf(w, "Address = %s\n", address)
-
 	default:
-		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
+		fmt.Fprintf(w, "Sorry, only GET")
 	}
 }
 
