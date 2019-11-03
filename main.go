@@ -12,6 +12,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+const version = "0.1.1"
+
 type oneRec struct {
 	Board       string  `json:"board"`
 	Temperature float64 `json:"temperature"`
@@ -40,7 +42,7 @@ func main() {
 	http.HandleFunc("/", htmlHelpResponse)
 	http.HandleFunc("/set_board_data", setSensorData)
 
-	fmt.Printf("Starting server for testing HTTP POST...\n")
+	fmt.Printf("Starting Server to HANDLE ahome.pro back end\n")
 	if err := http.ListenAndServe(":5000", nil); err != nil {
 		log.Fatal(err)
 	}
@@ -112,8 +114,12 @@ func setSensorData(w http.ResponseWriter, r *http.Request) {
 		statement.Exec(rec.Board, time.Now().Unix(), rec.Temperature, rec.Humidity, rec.Pressure)
 
 		w.WriteHeader(http.StatusCreated)
-		addedrecord, _ := getJSON("SELECT * FROM sensorsdata ORDER BY id DESC LIMIT 1")
-		fmt.Fprintf(w, addedrecord)
+
+		addedrecord, _, _ := getJSON("SELECT * FROM sensorsdata ORDER BY id DESC LIMIT 1")
+
+		addedrecordString, _ := json.Marshal(addedrecord)
+
+		fmt.Fprintf(w, string(addedrecordString))
 
 		fmt.Println(rec)
 
@@ -122,21 +128,21 @@ func setSensorData(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getJSON(sqlString string) (string, error) {
+func getJSON(sqlString string) ([]map[string]interface{}, int, error) {
 
 	// database, _ :=
 	// 	sql.Open("sqlite3", "./fathenda.db")
 
 	rows, err := database.Query(sqlString)
 	if err != nil {
-		return "", err
+		return make([]map[string]interface{}, 0), 0, err
 	}
 	defer rows.Close()
 	// database.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {
-		return "", err
+		return make([]map[string]interface{}, 0), 0, err
 	}
 
 	count := len(columns)
@@ -169,13 +175,15 @@ func getJSON(sqlString string) (string, error) {
 
 	fmt.Println("Row count : " + strconv.Itoa(rowCount))
 
-	jsonData, err := json.Marshal(tableData)
-	if err != nil {
-		return "", err
-	}
+	return tableData, rowCount, err
 
-	fmt.Println(string(jsonData))
-	return string(jsonData), nil
+	// jsonData, err := json.Marshal(tableData)
+	// if err != nil {
+	// 	return "", err
+	// }
+
+	// fmt.Println(string(jsonData))
+	// return string(jsonData), nil
 }
 
 func getCount(sqlString string) (string, error) {
@@ -207,8 +215,10 @@ func jsonResponseCount(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Println(sqlString)
 		w.Header().Set("Content-Type", "application/json")
-		response, _ := getJSON(sqlString)
-		fmt.Fprintf(w, response)
+
+		_, count, _ := getJSON(sqlString)
+
+		fmt.Fprintf(w, strconv.Itoa(count))
 
 	default:
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
@@ -245,8 +255,34 @@ func jsonResponse(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Println(sqlString)
 		w.Header().Set("Content-Type", "application/json")
-		response, _ := getJSON(sqlString)
-		fmt.Fprintf(w, response)
+
+		type jsResponse struct {
+			APIRev string                   `json:"APIRev"`
+			Entity []map[string]interface{} `json:"Entity"`
+			Total  int                      `json:"Total"`
+		}
+		var responseStruct jsResponse
+
+		responseStruct.APIRev = version
+
+		entity, total, _ := getJSON(sqlString)
+
+		responseStruct.Entity = entity
+		responseStruct.Total = total
+
+		fmt.Println(responseStruct)
+
+		fmt.Println("=========================================================================")
+
+		response, _ := json.Marshal(responseStruct)
+
+		fmt.Println(response)
+
+		fmt.Println("=========================================================================")
+
+		fmt.Fprintf(w, string(response))
+
+		// fmt.Fprintf(w, response)
 
 	default:
 		fmt.Fprintf(w, "Sorry, only GET")
@@ -259,26 +295,26 @@ func htmlHelpResponse(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	switch r.Method {
-	case "GET":
+	// switch r.Method {
+	// case "GET":
 
-		w.Header().Set("Content-Type", "application/json")
-		response, _ := getJSON("SELECT id, board, timestamp, temperature, humidity, pressure FROM sensorsdata")
-		fmt.Fprintf(w, response)
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	response, _ := getJSON("SELECT id, board, timestamp, temperature, humidity, pressure FROM sensorsdata")
+	// 	fmt.Fprintf(w, response)
 
-	case "POST":
-		// Call ParseForm() to parse the raw query and update r.PostForm and r.Form.
-		if err := r.ParseForm(); err != nil {
-			fmt.Fprintf(w, "ParseForm() err: %v", err)
-			return
-		}
-		fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
-		name := r.FormValue("name")
-		address := r.FormValue("address")
-		fmt.Fprintf(w, "Name = %s\n", name)
-		fmt.Fprintf(w, "Address = %s\n", address)
+	// case "POST":
+	// 	// Call ParseForm() to parse the raw query and update r.PostForm and r.Form.
+	// 	if err := r.ParseForm(); err != nil {
+	// 		fmt.Fprintf(w, "ParseForm() err: %v", err)
+	// 		return
+	// 	}
+	// 	fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
+	// 	name := r.FormValue("name")
+	// 	address := r.FormValue("address")
+	// 	fmt.Fprintf(w, "Name = %s\n", name)
+	// 	fmt.Fprintf(w, "Address = %s\n", address)
 
-	default:
-		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
-	}
+	// default:
+	// 	fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
+	// }
 }
