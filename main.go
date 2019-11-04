@@ -296,6 +296,8 @@ func jsonBoardDataChartResponse(w http.ResponseWriter, r *http.Request) {
 
 		sqlString = sqlString + " ORDER BY " + sortBy + " " + sortDir
 
+		sqlString = sqlString + " LIMIT 200"
+
 		fmt.Println(sqlString)
 
 		type OneRow []int64
