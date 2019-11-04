@@ -35,18 +35,9 @@ var database *sql.DB
 func main() {
 
 	database, _ = sql.Open("sqlite3", "./fathenda.db")
-	
-	// statement, _ :=
-	// 	database.Prepare("CREATE TABLE IF NOT EXISTS sensorsdata (id INTEGER PRIMARY KEY, board TEXT, timestamp NUMERIC, temperature NUMERIC, humidity NUMERIC, pressure NUMERIC, soil NUMERIC)")
-	// statement.Exec()
-
-	// statement1, _ :=
-	// 	database.Prepare("CREATE TABLE IF NOT EXISTS sensors (id INTEGER PRIMARY KEY, board TEXT, name TEXT, description TEXT, added NUMERIC)")
-	// statement1.Exec()
-
-	// database.Close()
 
 	http.HandleFunc("/get_board_data", jsonBoardDataResponse)
+	http.HandleFunc("/get_board_chart", jsonBoardDataChartResponse)
 	http.HandleFunc("/get_board", jsonBoardResponse)
 
 	http.HandleFunc("/get_board_data_count", jsonResponseCount)
@@ -262,6 +253,84 @@ func jsonBoardDataResponse(w http.ResponseWriter, r *http.Request) {
 		entity, total, _ := getJSON(sqlString)
 
 		responseStruct.Entity = entity
+		responseStruct.Total = total
+
+		response, _ := json.Marshal(responseStruct)
+
+		fmt.Fprintf(w, string(response))
+
+	default:
+		fmt.Fprintf(w, "Sorry, only GET")
+	}
+}
+
+func jsonBoardDataChartResponse(w http.ResponseWriter, r *http.Request) {
+
+	switch r.Method {
+	case "GET":
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		keys := r.URL.Query()
+		fmt.Println("\n-- URL parameters --")
+		fmt.Println(keys)
+		var sqlString string
+
+		sqlString = "SELECT id, board, timestamp, temperature, humidity, soil, pressure FROM sensorsdata"
+
+		if r.URL.Query().Get("board") != "" {
+			sqlString = sqlString + " WHERE board='" + r.URL.Query().Get("board") + "'"
+		}
+
+		// SORTING
+		var sortBy string = "timestamp"
+		if r.URL.Query().Get("sort_by") != "" {
+			sortBy = r.URL.Query().Get("sort_by")
+		}
+
+		var sortDir string = "DESC"
+		if r.URL.Query().Get("sort") != "" {
+			sortDir = r.URL.Query().Get("sort")
+		}
+
+		sqlString = sqlString + " ORDER BY " + sortBy + " " + sortDir
+
+		fmt.Println(sqlString)
+
+		type OneRow []int64
+		type Rows []OneRow
+		type jsResponse struct {
+			APIRev string   `json:"APIRev"`
+			Entity []OneRow `json:"Entity"`
+			Total  int      `json:"Total"`
+		}
+		var responseStruct jsResponse
+
+		responseStruct.APIRev = version
+
+		entity, total, _ := getJSON(sqlString)
+
+		var rows Rows
+		for i := 0; i < len(entity); i++ {
+			// fmt.Println(entity[i]["timestamp"])
+
+			var row OneRow
+			var tmp, _ = entity[i]["timestamp"].(int64)
+			row = append(row, tmp)
+			tmp, _ = entity[i]["temperature"].(int64)
+			row = append(row, tmp)
+			tmp, _ = entity[i]["humidity"].(int64)
+			row = append(row, tmp)
+			tmp, _ = entity[i]["pressure"].(int64)
+			row = append(row, tmp)
+			tmp, _ = entity[i]["soil"].(int64)
+			row = append(row, tmp)
+
+			rows = append(rows, row)
+		}
+
+		responseStruct.Entity = rows
 		responseStruct.Total = total
 
 		response, _ := json.Marshal(responseStruct)
