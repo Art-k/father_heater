@@ -312,7 +312,7 @@ func jsonBoardDataChartResponse(w http.ResponseWriter, r *http.Request) {
 		entity, total, _ := getJSON(sqlString)
 
 		var rows Rows
-		for i := len(entity) - 1; i < 0; i-- {
+		for i := len(entity) - 1; i >= 0; i-- {
 			// fmt.Println(entity[i]["timestamp"])
 
 			var row OneRow
